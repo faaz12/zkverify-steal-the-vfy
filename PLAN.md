@@ -1,10 +1,11 @@
 # zkVerify Agent Games — Steal the VFY: Build Plan + Status
 
-**Status (16 Nov 2026, ~10:30 WIB): BUILT + TESTED LOCALLY, NOT YET
-REGISTERED.** The agent is complete and all 10 local checks pass. What
-remains needs the dashboard in the user's browser: agent registration
-(+ strategy commitment), HMAC secret into Vercel env, preflight +
-practice turn. See §5.
+**Status (16 Nov 2026, ~10:35 WIB): BUILT, TESTED (10/10 local + live
+turn verified on Vercel), DEPLOYED, NOT YET REGISTERED.** The agent is
+complete and the deployed endpoint provably generates real Groth16
+proofs. What remains needs the dashboard in the user's browser: agent
+registration (+ strategy commitment), HMAC secret into Vercel env,
+preflight + practice turn. See §4.
 
 Competition account already registered 15 Nov via X `@nawijikk` (email
 goletupo@gmail.com). GitHub `faaz12` connected. Sibling agent Proof
@@ -193,15 +194,41 @@ cannot do that part. What the parent must do (device browser):
 
 ---
 
-## 5. Deployment
+## 5. Deployment — LIVE AND VERIFIED
 
-- Repo: https://github.com/faaz12/zkverify-steal-the-vfy (public, MIT)
-- Vercel: https://<project>.vercel.app (fill in after deploy)
-- Env (production): `HMAC_SECRET` (placeholder until registration),
-  `STEAL_VFY_PARAMS=8,18,8,0,0,0,0,0`,
-  `STEAL_VFY_SALT` (value in `~/.zkverify/steal-vfy-salt`).
+- Repo: https://github.com/faaz12/zkverify-steal-the-vfy (public, MIT),
+  commit `4e2d92e`.
+- Vercel: **https://zkverify-steal-the-vfy.vercel.app**
+  (production alias; underlying deployment
+  `zkverify-steal-the-py62bwugo-faaz12s-projects.vercel.app`).
+- Env (production): `HMAC_SECRET` = placeholder
+  `REPLACE-ME-after-registration-…` (MUST be replaced with the real
+  registration secret + redeploy before preflight), `STEAL_VFY_PARAMS`
+  = `8,18,8,0,0,0,0,0`, `STEAL_VFY_SALT` = value in
+  `~/.zkverify/steal-vfy-salt`.
+- Verified 16 Nov ~10:35 WIB:
+  - `GET /` → `{"ok":true,"protocolVersion":"v1"}`
+  - `GET /api/health` → `{"ok":true,"protocolVersion":"v1"}`
+  - `POST /api/task` unsigned → `{"error":"invalid signature"}`
+  - **Live signed practice turn** (`tests/live-turn.mjs`, matchId
+    `11111111-…`, 100/100): HTTP 200 in 3,037 ms (cold start + prove),
+    action `EXTRACT 8`, `policyProof` present (9 public signals,
+    `publicInputsHash` present), **local Groth16 verify: OK**, response
+    HMAC valid. The deployed function generates real proofs.
 - Secrets live ONLY in Vercel env + `~/.zkverify/` (mode 600). Never in
   the repo, never in chat.
+
+### Known limitation — turn store is in-memory only on Vercel
+`GITHUB_TOKEN` is NOT set as a Vercel env var, so the turn-response
+store falls back to in-memory (same as the Gatekeeper's current
+setup). A cold start loses the `(matchId, turn)` response cache, so a
+platform retry of a turn after a cold start would get a NEW
+`idempotencyKey`. Risk is low (turns arrive every ~30 s–5 min during a
+match, keeping the function warm; retries are rare), but for full
+robustness set a fine-grained GitHub PAT (contents:write on
+`faaz12/zkverify-steal-the-vfy`) as `GITHUB_TOKEN` in Vercel env. Do
+NOT reuse the local `gh` OAuth token for this without the user's
+explicit approval.
 
 ## 6. Sources
 
